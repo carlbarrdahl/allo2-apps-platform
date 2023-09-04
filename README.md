@@ -1,3 +1,128 @@
+# Allo Apps Platform
+
+What if there was an app platform for Allo2?
+
+In a similar way to Gnosis Safe where you can load apps in iframes that access your connected Safe, an Allo app could be built and loaded in an iframe.
+
+### Why?
+
+- It would simplify building apps on Allo
+- It would create a kind of marketplace of apps for the Allo protocol
+- community-shared components that are plug and play
+- ...?
+
+### How?
+
+#### Allo Apps Platform
+
+The platform app is like a browser. The user connects their wallet, manages their profile, discover apps, and renders them in an iframe. Similar to Gnosis Safe.
+
+It listens for messages (encoded function calls/txs) from the iframe (app) and sends them to the wallet where the user signs.
+
+#### Allo Apps SDK
+
+The Apps SDK consist of:
+
+- Allo2 SDK to call contracts
+- GraphQL API to query on-chain data
+- PostMessage bridge between Platform and App
+- React Provider (`AlloProvider`)
+
+#### Allo App
+
+- Uses `AlloProvider` and `useAlloAppsSDK()` to access the sdk
+- Is hosted and managed by developer and can be accessed with
+  - `https://platform.allo.app?url=https://third.party.app`
+
+#### Examples
+
+The AlloProvider provides all the required methods to interact with Allo contracts. They are also wrapped in ReactQuery useMutation and useQuery to handle caching, loading, and error states.
+
+Ready to use components for common UI and logic could be shared with the community similar to what Lens Protocol does.
+
+```jsx
+const MyApp = () => {
+  return (
+    <AlloProvider>
+      <FundPool />
+    </AlloProvider>
+  );
+};
+
+const FundPool = () => {
+  const sdk = useAlloAppsSDK();
+  const fund = sdk.allo.fundPool.useMutation();
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const { amount, poolId } = Object.fromEntries(new FormData(e.target));
+        fund.mutate(poolId, amount);
+      }}
+    >
+      <label>
+        Pool ID
+        <input type="number" name="poolId" />
+      </label>
+      <label>
+        Amount
+        <input type="number" name="amount" />
+      </label>
+      <button type="submit" disabled={fund.isLoading}>
+        Fund Pool
+      </button>
+    </form>
+  );
+};
+
+const ProjectsDonate = ({ poolId }) => {
+  const sdk = useAlloAppsSDK();
+  const allocate = sdk.allo.allocate.useMutation();
+  // Would be cool if the indexer could be queried like this
+  const projects = sdk.graph.Registered.useQuery({ poolId });
+  return (
+    <ol>
+      {projects.data?.map((project) => (
+        <li key={project.id}>
+          <h3>{project.name}</h3>
+          <button
+            disabled={allocate.isLoading}
+            onClick={() =>
+              allocate.mutate(
+                poolId,
+                sdk.utils.encodeAbiParameters(
+                  [{ name: "amount", type: "uint256" }],
+                  [sdk.utils.parseUnits(10, 6)]
+                )
+              )
+            }
+          >
+            Donate $10
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
+};
+```
+
+#### App ideas
+
+I like the idea of local apps that bridge online/offline. especially those that empower communities and help them regenerate in different ways. Each app could be a specific niche (microapps).
+
+Here are some examples:
+
+- micro-tipping/qf-voting for example art galleries
+- fund and provide clean water stations to areas that dont have yet (and other local regen projects)
+- nature cleanups (beach, parks, rivers, oceans, forests, ...)
+- open-mic events (allocations can actually serve as tickets where each ticket is a vote to a specfic act, then qf distribute along that) (could actually be useful for more than just open-mic events)
+- a place where projects like this can be supported (https://zachklein.com/Sidewalk+Garden)
+- governance and proposals could probably be built on Allo2 also
+
+Would love to hear more ideas on what's possible to build!
+
+---
+
 # Turborepo starter
 
 This is an official starter Turborepo.
